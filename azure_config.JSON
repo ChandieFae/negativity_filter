@@ -1,1 +1,5 @@
+{
+  "endpoint": "https://example-resource.cognitiveservices.azure.com/",
+  "key": "YOUR_API_KEY_HERE"
+}
 
