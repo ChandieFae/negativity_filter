@@ -1,77 +1,72 @@
 """
 negativity_filter.py
 ---------------------
-Detects and flags negative sentences in input text using Azure AI Language (Text Analytics).
-
-If Azure keys are not provided or invalid, uses mock logic.
+Scans input text and filters out sentences containing defined negative keywords or phrases.
+This version does not use sentiment models — it is fully keyword-driven.
 """
 
-import os
-import json
-from azure.core.credentials import AzureKeyCredential
-from azure.ai.textanalytics import TextAnalyticsClient
+def load_input_file(filename):
+    """Load raw text from a file."""
+    with open(filename, "r", encoding="utf-8") as f:
+        return f.read()
 
 
-# Load Azure config
-def load_config():
-    try:
-        with open("azure_config.json", "r") as f:
-            config = json.load(f)
-        return config["endpoint"], config["key"]
-    except (FileNotFoundError, KeyError):
-        print(" Azure config not found or incomplete. Falling back to mock mode.")
-        return None, None
+def write_output_file(sentences, flagged, output_file):
+    """Write cleaned version of text with redacted flagged sentences."""
+    with open(output_file, "w", encoding="utf-8") as f:
+        for sentence in sentences:
+            if sentence in flagged:
+                f.write("[REDACTED - NEGATIVE CONTENT]\n")
+            else:
+                f.write(sentence + ".\n")
 
 
-# Azure sentiment analysis
-def analyze_sentiment_azure(sentences, endpoint, key):
-    client = TextAnalyticsClient(endpoint=endpoint, credential=AzureKeyCredential(key))
-    response = client.analyze_sentiment(documents=sentences)
-    results = []
-    for sentence, analysis in zip(sentences, response):
-        if not analysis.is_error and analysis.sentiment == "negative":
-            results.append((sentence, analysis.confidence_scores.negative))
-    return results
-
-
-# Fallback mock analyzer
-def analyze_sentiment_mock(sentences):
-    negative_triggers = ["bad", "terrible", "worst", "never", "awful", "hate", "your fault"]
-    results = []
+def extract_negativity(sentences, keyword_list):
+    """Return sentences that contain any of the defined negative keywords or phrases."""
+    flagged = []
     for sentence in sentences:
-        if any(word in sentence.lower() for word in negative_triggers):
-            results.append((sentence, 0.95))  # fake confidence
-    return results
+        lower = sentence.lower()
+        if any(keyword in lower for keyword in keyword_list):
+            flagged.append(sentence)
+    return flagged
 
 
 def main():
-    # Load input
-    with open("example_input.txt", "r") as f:
-        text = f.read()
+    # 🔹 Your keyword list — customize as needed
+    negative_keywords = [
+        "terrible service",
+        "worst experience",
+        "never coming back",
+        "completely unacceptable",
+        "rude staff",
+        "they ignored",
+        "not worth it",
+        "your fault",
+        "they didn't listen",
+        "unhelpful"
+    ]
 
+    # 🔹 Load input
+    text = load_input_file("example_input.txt")
+
+    # 🔹 Break into sentences
     sentences = [s.strip() for s in text.split(".") if s.strip()]
-    
-    # Load Azure config
-    endpoint, key = load_config()
 
-    # Choose analyzer
-    if endpoint and key:
-        flagged = analyze_sentiment_azure(sentences, endpoint, key)
-    else:
-        flagged = analyze_sentiment_mock(sentences)
+    # 🔹 Filter by keywords
+    flagged = extract_negativity(sentences, negative_keywords)
 
-    # Write results
-    with open("cleaned_output.txt", "w") as out:
-        for sentence in sentences:
-            if any(sentence == flagged_s for flagged_s, _ in flagged):
-                out.write("[REDACTED - NEGATIVE SENTENCE]\n")
-            else:
-                out.write(sentence + ".\n")
+    # 🔹 Write filtered version
+    write_output_file(sentences, flagged, "cleaned_output.txt")
 
-    print(f"\n✅ Done! {len(flagged)} negative sentence(s) flagged.")
-    print("Filtered output written to: cleaned_output.txt")
+    # 🔹 Summary
+    print(f"✅ Done. {len(flagged)} sentence(s) flagged.")
+    if flagged:
+        print("\nFlagged content:")
+        for s in flagged:
+            print(f"- {s}")
 
 
 if __name__ == "__main__":
     main()
+
 
