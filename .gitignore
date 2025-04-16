@@ -1,0 +1,20 @@
+# 🔐 Sensitive config
+azure_config.json
+
+# 🐍 Python junk
+__pycache__/
+*.pyc
+
+# 🔧 Env files
+.env
+*.env
+
+# 📄 Output
+cleaned_output.txt
+
+# 💻 Editor folders
+.vscode/
+.idea/
+
+# 🍏 macOS fluff
+.DS_Store
